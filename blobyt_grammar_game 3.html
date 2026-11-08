@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BlobyT Grammar Game</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for in-browser JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Custom Scrollbar for a polished look */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-gray-200 flex items-center justify-center h-screen overflow-hidden p-0 sm:py-8 sm:px-4">
+    <div id="root" class="w-full h-full max-w-[393px] shadow-2xl bg-[#FFFDF7] relative overflow-hidden sm:max-h-[852px] sm:rounded-[3rem] sm:border-[10px] sm:border-gray-900 flex flex-col"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, Fragment } = React;
+
+        // --- Custom SVG Icons (Replacing Lucide dependencies) ---
+        const IconChevronLeft = ({ size = 24, className = "", strokeWidth = 2 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="15 18 9 12 15 6"></polyline></svg>
+        );
+        const IconX = ({ size = 24, className = "", strokeWidth = 2 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        );
+        const IconFlame = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z"></path></svg>
+        );
+        const IconSparkles = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 3v3"></path><path d="M18.5 5.5l-2.1 2.1"></path><path d="M21 12h-3"></path><path d="M18.5 18.5l-2.1-2.1"></path><path d="M12 21v-3"></path><path d="M5.5 18.5l2.1-2.1"></path><path d="M3 12h3"></path><path d="M5.5 5.5l2.1 2.1"></path></svg>
+        );
+        const IconLock = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        );
+        const IconCheck = ({ size = 24, className = "", strokeWidth = 2 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="20 6 9 17 4 12"></polyline></svg>
+        );
+        const IconTarget = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+        );
+        const IconTrophy = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"></path></svg>
+        );
+        const IconCalendar = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        );
+        const IconBookOpen = ({ size = 24, className = "", strokeWidth = 2 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+        );
+
+        // --- Game Data Scaffold & Helper ---
+        const makeQs = (data) => data.map(d => ({
+            q: d[0], options: d[1], correct: d[2],
+            explanation: <div className="space-y-2 mt-1 text-sm"><p>{d[3]}</p></div>
+        }));
+
+        const CATEGORIES_DATA = [
+            {
+                id: 'tenses',
+                title: '12 Tenses',
+                subtitle: 'เรียนรู้โครงสร้างและกาลทั้ง 12 แบบ',
+                icon: '⏳',
+                color: 'bg-amber-100 text-amber-800 border-amber-300',
+                accentColor: '#F59E0B',
+                levels: [
+                    {
+                        id: 1,
+                        title: 'Level 1: Present Simple',
+                        subtitle: 'กิจวัตร ความจริงทางธรรมชาติ',
+                        questions: makeQs([
+                            ["Water ___ at 100 degrees Celsius.", ["boils", "is boiling", "boiled"], 0, "☀️ ความจริงทางธรรมชาติ (Fact) เสมอ! Water นับไม่ได้นับเป็นเอกพจน์ กริยาเติม s"],
+                            ["She ___ to the gym every Monday.", ["go", "goes", "is going"], 1, "🔄 กิจวัตร (Routine) สังเกต 'every' ประธาน He/She/It กริยาเติม s/es"],
+                            ["I ___ chocolate ice cream very much.", ["am loving", "love", "loves"], 1, "❤️ บอกความรู้สึก (State Verbs) ไม่ใช้ -ing กำลังทำ ให้ใช้ Present Simple"],
+                            ["The train to London ___ at 6:00 PM.", ["leave", "is leaving", "leaves"], 2, "⏰ ตารางเวลา (Timetable) ในอนาคตที่มีกำหนดชัดเจน ใช้ Present Simple ได้เลย"],
+                            ["Cats ___ for about 12 to 16 hours a day.", ["sleeps", "sleep", "are sleeping"], 1, "🐱 ธรรมชาติทั่วไป Cats (พหูพจน์) + V.1 ไม่เติม s"],
+                            ["My brother ___ play tennis; he prefers football.", ["don't", "isn't", "doesn't"], 2, "🛑 ปฏิเสธ Present Simple: ประธานเอกพจน์ + doesn't + V.1"],
+                            ["___ you speak Spanish fluently?", ["Are", "Do", "Does"], 1, "❓ คำถาม Present Simple: You ใช้คู่กับ Do"],
+                            ["We ___ have dinner at a restaurant on Fridays.", ["usually", "now", "tomorrow"], 0, "📅 บอกความถี่ (usually = ปกติแล้ว) คู่กับ Present Simple เสมอ"],
+                            ["The Earth ___ around the Sun.", ["go", "is going", "goes"], 2, "🌍 กฎของจักรวาล Earth เอกพจน์ + goes"],
+                            ["He always ___ his keys on the table.", ["forget", "forgets", "is forgetting"], 1, "🔁 นิสัยประจำ สังเกต 'always' He เป็นเอกพจน์ + forgets"]
+                        ])
+                    },
+                    {
+                        id: 2, title: 'Level 2: Present Continuous', subtitle: 'เหตุการณ์กำลังเกิดขึ้น',
+                        questions: makeQs([
+                            ["I ___ to music right now.", ["listen", "am listening", "listens"], 1, "🎧 'right now' = กล้องไลฟ์สดกำลังถ่าย (is/am/are + V.ing)"],
+                            ["Look! The dog ___ after the mailman.", ["run", "runs", "is running"], 2, "👀 'Look!' ให้มองดูเดี๋ยวนี้ แสดงว่ากำลังเกิดขึ้น ใช้ is running"],
+                            ["They ___ English at the moment.", ["study", "are studying", "studies"], 1, "📚 'at the moment' = ตอนนี้ โครงสร้าง They + are + V.ing"],
+                            ["Shh! The baby ___.", ["sleeps", "is sleeping", "sleep"], 1, "🤫 'Shh!' (จุ๊ๆ) แปลว่ากำลังมีคนหลับอยู่เดี๋ยวนี้ ใช้ is sleeping"],
+                            ["We ___ dinner tonight. Do you want to join?", ["have", "had", "are having"], 2, "📅 Present Cont. ใช้กับแพลนในอนาคตอันใกล้ที่ชัวร์ 100% ได้ด้วย (คืนนี้)"],
+                            ["Why ___ you crying?", ["do", "are", "is"], 1, "😢 คำถาม: Why + is/am/are + ประธาน + V.ing (You ใช้ Are)"],
+                            ["She ___ currently working on a new project.", ["is", "does", "has"], 0, "💼 'currently' = ในปัจจุบัน/ตอนนี้ โครงสร้าง She + is + working"],
+                            ["I can't talk right now, I ___ driving.", ["am", "was", "be"], 0, "🚗 'right now' = กำลังขับรถอยู่ I คู่กับ am"],
+                            ["Listen! Someone ___ the piano.", ["plays", "is playing", "play"], 1, "🎹 'Listen!' ให้ฟังเดี๋ยวนี้ แสดงว่ากำลังมีคนเล่นอยู่ Someone ถือเป็นเอกพจน์ ใช้ is"],
+                            ["The climate ___ warmer every year.", ["gets", "is getting", "got"], 1, "🌡️ การเปลี่ยนแปลงที่ค่อยเป็นค่อยไป (getting warmer) ใช้ Present Cont."]
+                        ])
+                    },
+                    {
+                        id: 3, title: 'Level 3: Present Perfect', subtitle: 'สะพานเชื่อม อดีต -> ปัจจุบัน',
+                        questions: makeQs([
+                            ["I ___ my keys. I can't enter the house.", ["lost", "have lost", "had lost"], 1, "🌉 เกิดในอดีต แต่ส่งผลถึงปัจจุบัน (ตอนนี้เข้าบ้านไม่ได้) ใช้ have/has + V.3"],
+                            ["She ___ to Japan three times.", ["goes", "has been", "went"], 1, "✈️ ประสบการณ์ชีวิตในอดีตถึงปัจจุบัน (เคยไป 3 ครั้ง) ใช้ has been"],
+                            ["___ you ever eaten sushi?", ["Do", "Did", "Have"], 2, "🍣 ถามประสบการณ์ 'เคยไหม?' (ever) ใช้ Have + You + V.3"],
+                            ["They ___ just finished their homework.", ["has", "have", "had"], 1, "✅ เพิ่งทำเสร็จหมาดๆ (just) They คู่กับ have"],
+                            ["He has lived here ___ 2010.", ["for", "since", "in"], 1, "📅 'since' (ตั้งแต่) ใช้ระบุจุดเริ่มต้นของเวลาในอดีตมาถึงปัจจุบัน"],
+                            ["I have known him ___ 5 years.", ["since", "for", "from"], 1, "⏱️ 'for' (เป็นเวลา) ใช้บอกระยะเวลาที่ผ่านมาจนถึงตอนนี้"],
+                            ["We ___ haven't decided where to go.", ["already", "just", "still"], 2, "🤔 'still' (ยังคง) มักใช้ในประโยคปฏิเสธ We still haven't..."],
+                            ["Has she ___ finished her work?", ["yet", "already", "ever"], 0, "⌛ 'yet' (หรือยัง) ใช้ท้ายประโยคคำถาม/ปฏิเสธใน Present Perfect"],
+                            ["I have ___ finished reading this book.", ["yet", "already", "ever"], 1, "📖 'already' (เรียบร้อยแล้ว) วางไว้หน้า V.3 เพื่อบอกว่าทำเสร็จก่อนกำหนด"],
+                            ["Someone ___ my sandwich! It's gone!", ["has eaten", "ate", "eats"], 0, "🥪 แซนด์วิชหายไปแล้ว (ส่งผลให้เห็นตอนนี้) ใช้ has + V.3"]
+                        ])
+                    },
+                    {
+                        id: 4, title: 'Level 4: Present Perfect Cont.', subtitle: 'ทำตั้งแต่อดีต จนถึงตอนนี้ (เน้นความต่อเนื่อง)',
+                        questions: makeQs([
+                            ["I ___ for you for two hours!", ["am waiting", "have been waiting", "wait"], 1, "⏳ เน้นว่า 'รอมาอย่างต่อเนื่อง' ตั้งแต่อดีตจนถึงวินาทีนี้ (have/has been + V.ing)"],
+                            ["She ___ all day.", ["has been crying", "is crying", "cries"], 0, "😢 'all day' (ทั้งวัน) เน้นความต่อเนื่องไม่หยุด ใช้ has been + V.ing"],
+                            ["It ___ since morning.", ["is raining", "rained", "has been raining"], 2, "🌧️ ฝนตกตั้งแต่เช้าและตอนนี้ก็ยังตกอยู่ เน้นความต่อเนื่อง"],
+                            ["They have been playing football ___ 3 o'clock.", ["since", "for", "in"], 0, "⏰ ระบุจุดเริ่มต้นของเวลา (ตั้งแต่ 3 โมง) ใช้ 'since'"],
+                            ["How long ___ you been living here?", ["do", "are", "have"], 2, "❓ โครงสร้างคำถาม: How long + have/has + S + been + V.ing"],
+                            ["He is out of breath because he ___.", ["has been running", "is running", "runs"], 0, "🏃‍♂️ หอบเหนื่อยในปัจจุบัน เพราะเพิ่งทำกิจกรรมต่อเนื่องเสร็จหมาดๆ"],
+                            ["I'm tired. I have been ___ all night.", ["studied", "study", "studying"], 2, "🥱 โครงสร้าง have been ต้องตามด้วย V.ing เสมอ"],
+                            ["We have been working on this project ___ months.", ["since", "for", "during"], 1, "📅 'months' เป็นระยะเวลา ใช้ 'for' (เป็นเวลาหลายเดือน)"],
+                            ["Has she been ___ TV all afternoon?", ["watching", "watched", "watch"], 0, "📺 หลัง been ต้องใช้ V.ing เสมอใน Tense นี้"],
+                            ["Your eyes are red. ___ you been crying?", ["Are", "Did", "Have"], 2, "👀 ตาแดงเพราะร้องไห้มาต่อเนื่อง (เห็นผลลัพธ์ชัดเจน) ใช้ Have you been..."]
+                        ])
+                    },
+                    {
+                        id: 5, title: 'Level 5: Past Simple', subtitle: 'จบไปแล้วในอดีต',
+                        questions: makeQs([
+                            ["I ___ to the cinema yesterday.", ["go", "went", "have gone"], 1, "⏪ มีคำว่า 'yesterday' แปลว่าจบไปแล้ว ใช้ V.2 (went)"],
+                            ["She ___ a new car last week.", ["buys", "has bought", "bought"], 2, "🚗 'last week' จบไปแล้ว ใช้ V.2 ของ buy คือ bought"],
+                            ["___ you see the movie last night?", ["Do", "Did", "Have"], 1, "❓ คำถามในอดีต (last night) ต้องใช้ Did + ประธาน + V.1"],
+                            ["They ___ at home yesterday.", ["aren't", "wasn't", "weren't"], 2, "🏠 ปฏิเสธของ verb to be ในอดีต They เป็นพหูพจน์ ใช้ weren't (were not)"],
+                            ["I ___ pizza for dinner yesterday.", ["eat", "ate", "eaten"], 1, "🍕 เหตุการณ์ในอดีต ใช้ V.2 ของ eat คือ ate"],
+                            ["When ___ he arrive?", ["did", "does", "was"], 0, "⏱️ ถามเวลาในอดีต โครงสร้าง Wh-word + did + S + V.1"],
+                            ["We didn't ___ tennis yesterday.", ["play", "played", "playing"], 0, "🎾 หลัง did/didn't กริยาต้องกลับเป็น V.1 (ไม่เติม ed) เสมอ!"],
+                            ["He ___ born in 1990.", ["is", "was", "did"], 1, "👶 การเกิดเป็นเรื่องในอดีต ใช้ verb to be ช่อง 2 (He was born...)"],
+                            ["What did you ___ last weekend?", ["do", "did", "done"], 0, "🤔 มี 'did' อยู่แล้ว กริยาหลักต้องเป็น V.1 เสมอ ➔ What did you do?"],
+                            ["The train ___ 10 minutes ago.", ["leaves", "left", "has left"], 1, "⏳ 'ago' แปลว่าผ่านไปแล้ว (จบแล้ว) ใช้ V.2 ของ leave คือ left"]
+                        ])
+                    },
+                    {
+                        id: 6, title: 'Level 6: Past Continuous', subtitle: 'อดีตที่กำลังดำเนินอยู่ (มักถูกแทรก)',
+                        questions: makeQs([
+                            ["I ___ a shower when the phone rang.", ["took", "am taking", "was taking"], 2, "🚿 'กำลังทำ' ในอดีตแล้วมีเหตุการณ์มาแทรก โครงสร้าง was/were + V.ing"],
+                            ["They ___ football at 5 PM yesterday.", ["were playing", "played", "are playing"], 0, "⚽ ระบุเวลาเป๊ะๆ ในอดีต (5 PM yesterday) ว่ากำลังทำสิ่งนั้นอยู่ ใช้ were playing"],
+                            ["While she was reading, he ___.", ["cooks", "was cooking", "is cooking"], 1, "📖 2 เหตุการณ์ 'กำลังเกิดขึ้น' พร้อมกันในอดีต ใช้ Past Cont. ทั้งคู่ (was/were + V.ing)"],
+                            ["What ___ you doing when I called?", ["are", "did", "were"], 2, "📞 ถามว่า 'กำลังทำอะไรอยู่' ตอนที่ฉันโทรไป You ใช้คู่กับ were"],
+                            ["The sun ___ when we woke up.", ["shines", "was shining", "is shining"], 1, "☀️ บรรยายฉากหลัง/สภาพแวดล้อมในอดีต (พระอาทิตย์กำลังส่องแสง) ใช้ was shining"],
+                            ["I was walking home ___ it started to rain.", ["when", "while", "as"], 0, "🌧️ 'when' มักนำหน้าประโยค Past Simple (เหตุการณ์ที่มาแทรก)"],
+                            ["___ I was sleeping, the dog barked.", ["When", "While", "So"], 1, "🐕 'While' (ในขณะที่) มักนำหน้าประโยค Past Cont. (was/were + V.ing)"],
+                            ["She wasn't ___ attention in class.", ["pay", "paying", "paid"], 1, "🚫 ปฏิเสธ was/were not ต้องตามด้วย V.ing เสมอ"],
+                            ["We were watching TV while they ___ dinner.", ["had", "have", "were having"], 2, "📺 2 เหตุการณ์กำลังเกิดคู่ขนานกัน ใช้ Past Cont. ทั้งคู่"],
+                            ["He dropped his keys while he ___ for the bus.", ["waited", "was waiting", "waits"], 1, "🚌 เหตุการณ์ที่ยาวกว่า (กำลังรอรถเมล์) ใช้ was waiting และมีเหตุการณ์สั้นๆ (ทำกุญแจตก) มาแทรก"]
+                        ])
+                    },
+                    {
+                        id: 7, title: 'Level 7: Past Perfect', subtitle: 'อดีตซ้อนอดีต (เกิดก่อน V3, เกิดหลัง V2)',
+                        questions: makeQs([
+                            ["When I arrived, the train ___.", ["left", "had left", "has left"], 1, "🚂 รถไฟออกไป'ก่อน'ที่ฉันจะไปถึง (เกิดก่อน = had + V.3, เกิดหลัง = V.2)"],
+                            ["She ___ finished her work before she went out.", ["has", "have", "had"], 2, "ทำงานเสร็จ'ก่อน' (had finished) แล้วค่อยออกไป (went)"],
+                            ["I was hungry because I ___ eaten anything.", ["haven't", "didn't", "hadn't"], 2, "🍔 หิว (ในอดีต) เพราะ'ก่อนหน้านั้น'ยังไม่ได้กินอะไรเลย ใช้ hadn't + V.3"],
+                            ["By the time we got there, the movie ___.", ["had started", "started", "has started"], 0, "🎬 'By the time' + V.2 มักคู่กับ had + V.3 (หนังเริ่มไปก่อนแล้ว)"],
+                            ["He didn't recognize me because I ___ my hair.", ["cut", "had cut", "have cut"], 1, "✂️ เขาจำไม่ได้ (V.2) เพราะฉันไปตัดผมมาก่อนหน้านั้น (had + V.3)"],
+                            ["Had you ___ him before the party?", ["meet", "met", "meeting"], 1, "❓ โครงสร้างคำถาม Had + S + V.3 (V.3 ของ meet คือ met)"],
+                            ["They were tired because they ___ poorly the night before.", ["slept", "have slept", "had slept"], 2, "😴 เหนื่อย (V.2) เพราะคืนก่อนหน้าโน้นนอนไม่หลับ (had + V.3 เกิดก่อน)"],
+                            ["I realized that I ___ my wallet at home.", ["left", "have left", "had left"], 2, "👛 เพิ่งนึกได้ (V.2) ว่าลืมกระเป๋าตังค์ไว้ก่อนหน้านี้แล้ว (had + V.3)"],
+                            ["After she ___ the letter, she sent it.", ["writes", "wrote", "had written"], 2, "✉️ 'After' มักตามด้วยเหตุการณ์ที่เกิดก่อน (had + V.3) แล้วค่อยตามด้วย V.2"],
+                            ["He was sad because his dog ___ away.", ["had run", "has run", "ran"], 0, "🐕 เศร้า (V.2) เพราะหมาหนีไปก่อนหน้านั้น (had + V.3)"]
+                        ])
+                    },
+                    {
+                        id: 8, title: 'Level 8: Past Perfect Cont.', subtitle: 'อดีตที่ทำอย่างต่อเนื่อง ก่อนเกิดอีกเหตุการณ์',
+                        questions: makeQs([
+                            ["I ___ for an hour when the bus finally arrived.", ["had been waiting", "was waiting", "waited"], 0, "⏳ เน้นว่า 'รอมาอย่างต่อเนื่อง' (had been V.ing) ก่อนที่รถบัสจะมาถึง (V.2)"],
+                            ["She was tired because she ___ all day.", ["had worked", "had been working", "was working"], 1, "😓 เหนื่อย (V.2) เพราะทำแบบต่อเนื่องยาวนานมาทั้งวัน (had been working)"],
+                            ["They ___ for 2 hours before it started to rain.", ["were playing", "had been playing", "played"], 1, "⚽ เล่นมาอย่างต่อเนื่อง (had been V.ing) จนกระทั่งฝนตก (V.2)"],
+                            ["He ___ to fix the car all morning before he gave up.", ["tried", "was trying", "had been trying"], 2, "🚗 พยายามมาตลอดเช้า (เน้นความยาวนาน) ก่อนที่จะยอมแพ้ (V.2)"],
+                            ["How long ___ you been waiting when she came?", ["have", "were", "had"], 2, "❓ ควบรวมกับเหตุการณ์ในอดีต (when she came) ต้องใช้ had been"],
+                            ["The ground was wet because it ___.", ["has been raining", "had been raining", "was raining"], 1, "🌧️ พื้นเปียก (V.2) เพราะก่อนหน้านั้นฝนตกต่อเนื่องมาจนหยุด (had been V.ing)"],
+                            ["I had been ___ English for 3 years before I moved to London.", ["study", "studied", "studying"], 2, "📚 โครงสร้าง had been ต้องตามด้วย V.ing เสมอ"],
+                            ["Her eyes were red. ___ she been crying?", ["Has", "Had", "Was"], 1, "👀 ตาแดงในอดีต (were red) เพราะก่อนหน้านั้นร้องไห้มา ใช้ Had she been..."],
+                            ["We had been driving for hours ___ we found a gas station.", ["when", "after", "before"], 2, "🚗 ขับรถต่อเนื่องมาก่อน (before) ที่จะเจอปั๊มน้ำมัน"],
+                            ["By the time the manager arrived, they ___ for 30 minutes.", ["were arguing", "had argued", "had been arguing"], 2, "🗣️ เน้นความต่อเนื่องของการเถียงกัน ก่อนที่ผู้จัดการจะมาถึง"]
+                        ])
+                    },
+                    {
+                        id: 9, title: 'Level 9: Future Simple', subtitle: 'คาดการณ์อนาคต ตัดสินใจเดี๋ยวนี้ (will)',
+                        questions: makeQs([
+                            ["I think it ___ rain tomorrow.", ["will", "is going to", "rains"], 0, "☁️ การคาดเดาจากความคิด (I think) นิยมใช้ will + V.1"],
+                            ["'The phone is ringing.' 'I ___ answer it!'", ["am going to", "will", "answer"], 1, "📞 การตัดสินใจกะทันหันเดี๋ยวนั้น (ฉับพลัน) ใช้ will + V.1 เสมอ"],
+                            ["She ___ turn 18 next month.", ["will", "is going to", "turns"], 0, "🎂 เรื่องที่หลีกเลี่ยงไม่ได้ในอนาคต (เช่น อายุ) นิยมใช้ will"],
+                            ["___ you help me with this box?", ["Are", "Do", "Will"], 2, "📦 การขอร้อง (Request) ให้คนอื่นช่วย ใช้ Will you...?"],
+                            ["I promise I ___ tell anyone.", ["don't", "won't", "am not going to"], 1, "🤫 การให้คำสัญญา (Promise) ใช้ will / won't เสมอ"],
+                            ["We ___ go to Japan next year. We bought the tickets!", ["will", "are going to", "go"], 1, "✈️ ถ้ามีการวางแผนเตรียมการไว้แล้ว (ซื้อตั๋วแล้ว) ชัวร์ๆ ใช้ are going to"],
+                            ["Look at those dark clouds! It ___ rain.", ["will", "is going to", "rains"], 1, "🌧️ คาดเดาโดยมี 'หลักฐาน' ให้เห็นตรงหน้า (เมฆดำมาเลย) ใช้ is going to"],
+                            ["I ___ call you when I get home.", ["will", "am going to", "call"], 0, "📞 การเสนอตัวทำอะไรให้ (Offer) หรือตัดสินใจตอนพูด ใช้ will"],
+                            ["Will they ___ the game?", ["win", "won", "winning"], 0, "🏆 หลัง will ต้องตามด้วย V.1 (Infinitive ไม่ผันรูป) เสมอ"],
+                            ["I'm sure he ___ pass the exam.", ["will", "is going to", "passes"], 0, "💯 แสดงความเชื่อมั่น/คาดเดา (I'm sure) นิยมคู่กับ will"]
+                        ])
+                    },
+                    {
+                        id: 10, title: 'Level 10: Future Continuous', subtitle: 'เวลานี้ในอนาคต กำลังทำสิ่งนี้อยู่',
+                        questions: makeQs([
+                            ["At 8 PM tonight, I ___ dinner.", ["will have", "will be having", "have"], 1, "⏱️ ระบุเวลาเป๊ะๆ ในอนาคต ว่าเวลานั้น 'กำลังทำ' สิ่งนี้อยู่ ใช้ will be + V.ing"],
+                            ["This time tomorrow, we ___ on the beach.", ["will lie", "are lying", "will be lying"], 2, "🏖️ 'เวลานี้ของวันพรุ่งนี้' ฉันกำลังทำสิ่งนี้อยู่ (will be lying)"],
+                            ["Don't call me at 10. I ___.", ["will sleep", "will be sleeping", "sleep"], 1, "🚫 ห้ามโทรมาตอน 10 โมงนะ เพราะตอนนั้นฉัน 'กำลังหลับอยู่'"],
+                            ["They ___ playing football tomorrow afternoon.", ["will", "will be", "are"], 1, "⚽ โครงสร้าง: S + will be + V.ing"],
+                            ["___ you be using your car tomorrow?", ["Will", "Do", "Are"], 0, "🚗 โครงสร้างคำถาม: Will + S + be + V.ing (เป็นการถามแผนการอย่างสุภาพ)"],
+                            ["I will be ___ my homework when you arrive.", ["do", "did", "doing"], 2, "📚 หลัง will be ต้องตามด้วย V.ing เสมอ"],
+                            ["She ___ be working late tonight.", ["will", "is", "does"], 0, "💼 โครงสร้าง Future Cont. ต้องมี will เสมอ"],
+                            ["We will be ___ over the Pacific Ocean at 3 AM.", ["fly", "flew", "flying"], 2, "✈️ ระบุเวลาชัดเจนในอนาคตว่ากำลังบินอยู่ ใช้ V.ing"],
+                            ["Will he be ___ for us at the station?", ["waits", "waiting", "waited"], 1, "🚉 หลัง be ใน Tense นี้ต้องใช้ V.ing เสมอ"],
+                            ["At this time next week, I ___ my exams.", ["will finish", "will be taking", "take"], 1, "📝 'เวลานี้สัปดาห์หน้า' กำลังนั่งทำข้อสอบอยู่ ใช้ will be taking"]
+                        ])
+                    },
+                    {
+                        id: 11, title: 'Level 11: Future Perfect', subtitle: 'ปักหมุดอนาคต (เสร็จสมบูรณ์ในอนาคต)',
+                        questions: makeQs([
+                            ["By next week, I ___ this book.", ["will finish", "will have finished", "finished"], 1, "🎯 'By' (ภายในเวลา...) เป็นตัวใบ้บอกว่าภายในเวลานั้นจะ 'ทำเสร็จสมบูรณ์' แล้ว (will have + V.3)"],
+                            ["By 5 PM, they ___ the report.", ["will complete", "will have completed", "completed"], 1, "📄 ภายใน 5 โมงเย็น รายงานนี้จะเสร็จเรียบร้อยแล้ว ใช้ will have + V.3"],
+                            ["She ___ cleaned the house by the time you arrive.", ["will", "will have", "has"], 1, "🧹 ภายในเวลาที่คุณมาถึง บ้านจะถูกทำความสะอาดเสร็จไปก่อนหน้าแล้ว"],
+                            ["By 2030, we ___ a new home.", ["will have built", "will build", "are building"], 0, "🏠 ปักหมุดเวลาในอนาคต (2030) ว่าสิ่งนี้จะเสร็จสิ้นไปแล้ว"],
+                            ["Will you ___ your homework by 8 PM?", ["finished", "have finished", "finishing"], 1, "❓ โครงสร้างคำถาม: Will + S + have + V.3"],
+                            ["They won't have ___ the painting by tomorrow.", ["finish", "finishing", "finished"], 2, "🎨 หลัง will have ต้องตามด้วย กริยาช่อง 3 (V.3) เสมอ"],
+                            ["I ___ have cooked dinner by the time he gets back.", ["will", "am", "do"], 0, "🍲 โครงสร้าง Future Perfect: S + will have + V.3"],
+                            ["By next year, she will have ___ from university.", ["graduates", "graduating", "graduated"], 2, "🎓 หลัง will have ต้องใช้ V.3 (graduated)"],
+                            ["How many countries will you have ___ by the age of 30?", ["visit", "visiting", "visited"], 2, "🌍 ถามถึงความสำเร็จในอนาคต ใช้ V.3 (visited)"],
+                            ["The snow ___ melted by spring.", ["will have", "will", "has"], 0, "☃️ หิมะจะละลายหมด 'เรียบร้อยแล้ว' เมื่อถึงฤดูใบไม้ผลิ"]
+                        ])
+                    },
+                    {
+                        id: 12, title: 'Level 12: Future Perfect Cont.', subtitle: 'เน้นความต่อเนื่องจนถึงจุดหนึ่งในอนาคต',
+                        questions: makeQs([
+                            ["By next year, I ___ here for 5 years.", ["will work", "will have been working", "have worked"], 1, "⏳ ภายในปีหน้า จะเท่ากับว่า 'ทำงานต่อเนื่องมาครบ 5 ปี' (will have been + V.ing)"],
+                            ["By 8 PM, we ___ for 3 hours.", ["will study", "will have studied", "will have been studying"], 2, "📚 เน้นความต่อเนื่องของเวลา (for 3 hours) จนถึง 2 ทุ่ม ใช้ will have been V.ing"],
+                            ["She will have been ___ piano for a decade next month.", ["play", "played", "playing"], 2, "🎹 หลัง will have been ต้องตามด้วย V.ing เสมอ"],
+                            ["By December, they ___ living in Paris for a year.", ["will be", "will have been", "have been"], 1, "🗼 ระบุจุดเวลาในอนาคต + ระยะเวลาความต่อเนื่อง ใช้ will have been"],
+                            ["How long will you have been ___ English by the time you graduate?", ["learn", "learnt", "learning"], 2, "❓ ถามความต่อเนื่อง หลัง been ใช้ V.ing"],
+                            ["By midnight, the machine ___ running for 48 hours nonstop.", ["will have been", "will be", "has been"], 0, "⚙️ เน้นการทำงานต่อเนื่องแบบไม่หยุดพักจนถึงอนาคต (เที่ยงคืน)"],
+                            ["I ___ have been waiting for an hour by the time she arrives.", ["will", "shall", "would"], 0, "🕰️ โครงสร้างอนาคตต้องขึ้นต้นด้วย will (will have been V.ing)"],
+                            ["By 2025, he will have been ___ as a doctor for 10 years.", ["work", "worked", "working"], 2, "👨‍⚕️ หลัง been ต้องใช้ V.ing"],
+                            ["Will they have been ___ the project for 6 months by July?", ["developed", "developing", "develop"], 1, "💻 การกระทำต่อเนื่องใช้ V.ing (developing)"],
+                            ["By the end of the day, I will have been ___ on this code for 12 hours.", ["program", "programmed", "programming"], 2, "👨‍💻 เน้นระยะเวลาที่ทำอย่างต่อเนื่อง 12 ชั่วโมง ใช้ V.ing"]
+                        ])
+                    },
+                    {
+                        id: 13, title: 'Level 13: Mixed Tenses', subtitle: 'Boss Fight - ทบทวนทั้ง 12 Tenses!',
+                        questions: makeQs([
+                            ["I ___ my keys! I can't open the door right now.", ["lost", "have lost", "had lost"], 1, "🌉 Present Perfect: ทำหายในอดีต แต่ส่งผลมาถึงปัจจุบัน (เข้าบ้านไม่ได้)"],
+                            ["Look! The monkey ___ your banana!", ["eats", "ate", "is eating"], 2, "🎥 Present Continuous: กล้องไลฟ์สด สังเกต Look! กำลังเกิดขึ้นเดี๋ยวนี้"],
+                            ["Water ___ at 100 degrees Celsius.", ["boils", "is boiling", "has boiled"], 0, "☀️ Present Simple: ความจริงทางธรรมชาติ (Fact) เสมอ"],
+                            ["I ___ to the cinema yesterday.", ["go", "went", "have gone"], 1, "⏪ Past Simple: มี 'yesterday' แปลว่าจบไปแล้ว ใช้ V.2"],
+                            ["I ___ a shower when the phone rang.", ["took", "am taking", "was taking"], 2, "🚿 Past Cont: 'กำลังทำ' ในอดีตแล้วมีคนโทรมาแทรก (was/were + V.ing)"],
+                            ["When I arrived, the train ___.", ["left", "had left", "has left"], 1, "🚂 Past Perfect: รถไฟออกไป'ก่อน'ที่ฉันจะไปถึง (เกิดก่อนใช้ had + V.3)"],
+                            ["I think it ___ rain tomorrow.", ["will", "is going to", "rains"], 0, "☁️ Future Simple: คาดเดาจากความคิด (I think) ใช้ will + V.1"],
+                            ["At 8 PM tonight, I ___ dinner.", ["will have", "will be having", "have"], 1, "⏱️ Future Cont: ระบุเวลาเป๊ะๆ ในอนาคตว่า 'กำลังทำ' ใช้ will be V.ing"],
+                            ["By next week, I ___ this book.", ["will finish", "will have finished", "finished"], 1, "🎯 Future Perfect: ภายในเวลานั้นจะ 'ทำเสร็จสมบูรณ์' (will have + V.3)"],
+                            ["I ___ for you for two hours! Where are you?", ["am waiting", "have been waiting", "wait"], 1, "⏳ Present Perfect Cont: รออย่างต่อเนื่องตั้งแต่อดีตจนถึงวินาทีนี้!"]
+                        ])
+                    }
+                ]
+            },
+            {
+                id: 'v1v2v3',
+                title: 'กริยา 3 ช่อง',
+                subtitle: 'เปลี่ยนรูป เติม ed หรือเหมือนเดิม?',
+                icon: '📝',
+                color: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+                accentColor: '#10B981',
+                levels: [
+                    {
+                        id: 1, title: 'Level 1: Basic Verbs 1', subtitle: 'คำกริยาพื้นฐานที่พบบ่อย',
+                        questions: makeQs([
+                            ["What is the V2 and V3 of 'go'?", ["went / gone", "goed / goed", "goes / going"], 0, "🚶 go - went - gone (ไป)"],
+                            ["What is the V2 and V3 of 'eat'?", ["ate / eaten", "eated / eated", "eat / eaten"], 0, "🍔 eat - ate - eaten (กิน)"],
+                            ["What is the V2 and V3 of 'see'?", ["saw / seen", "seed / seed", "see / saw"], 0, "👀 see - saw - seen (เห็น)"],
+                            ["What is the V2 and V3 of 'do'?", ["did / done", "doed / doed", "does / doing"], 0, "✅ do - did - done (ทำ)"],
+                            ["What is the V2 and V3 of 'make'?", ["made / made", "maked / maked", "make / made"], 0, "🛠️ make - made - made (สร้าง/ทำ)"],
+                            ["What is the V2 and V3 of 'take'?", ["taked / taked", "took / taken", "take / took"], 1, "🤲 take - took - taken (หยิบ/พาไป)"],
+                            ["What is the V2 and V3 of 'give'?", ["gived / gived", "gave / given", "give / gave"], 1, "🎁 give - gave - given (ให้)"],
+                            ["What is the V2 and V3 of 'know'?", ["knowed / knowed", "knew / known", "know / knew"], 1, "🧠 know - knew - known (รู้)"],
+                            ["What is the V2 and V3 of 'write'?", ["writed / writed", "wrote / written", "write / wrote"], 1, "✍️ write - wrote - written (เขียน)"],
+                            ["What is the V2 and V3 of 'speak'?", ["speaked / speaked", "spoke / spoken", "speak / spoke"], 1, "🗣️ speak - spoke - spoken (พูด)"]
+                        ])
+                    },
+                    {
+                        id: 2, title: 'Level 2: Basic Verbs 2', subtitle: 'กลุ่มคำที่เปลี่ยนรูปคล้ายกัน',
+                        questions: makeQs([
+                            ["What is the V2 and V3 of 'buy'?", ["buyed / buyed", "bought / bought", "boaght / boaght"], 1, "🛒 buy - bought - bought (ซื้อ)"],
+                            ["What is the V2 and V3 of 'bring'?", ["bringed / bringed", "brought / brought", "brang / brung"], 1, "📦 bring - brought - brought (นำมา)"],
+                            ["What is the V2 and V3 of 'catch'?", ["catched / catched", "caught / caught", "cotch / cotched"], 1, "⚾ catch - caught - caught (จับ)"],
+                            ["What is the V2 and V3 of 'teach'?", ["teached / teached", "taught / taught", "tought / tought"], 1, "👨‍🏫 teach - taught - taught (สอน)"],
+                            ["What is the V2 and V3 of 'think'?", ["thinked / thinked", "thought / thought", "thank / thunk"], 1, "🤔 think - thought - thought (คิด)"],
+                            ["What is the V2 and V3 of 'fight'?", ["fighted / fighted", "fought / fought", "fate / faught"], 1, "🥊 fight - fought - fought (ต่อสู้)"],
+                            ["What is the V2 and V3 of 'sleep'?", ["sleeped / sleeped", "slept / slept", "slap / slapt"], 1, "💤 sleep - slept - slept (นอนหลับ)"],
+                            ["What is the V2 and V3 of 'keep'?", ["keeped / keeped", "kept / kept", "kap / kapt"], 1, "🔒 keep - kept - kept (เก็บรักษา)"],
+                            ["What is the V2 and V3 of 'feel'?", ["feeled / feeled", "felt / felt", "fall / fallen"], 1, "❤️ feel - felt - felt (รู้สึก)"],
+                            ["What is the V2 and V3 of 'leave'?", ["leaved / leaved", "left / left", "lave / laven"], 1, "🚪 leave - left - left (ออกจาก/ทิ้งไว้)"]
+                        ])
+                    },
+                    {
+                        id: 3, title: 'Level 3: Same Forms', subtitle: 'คำกริยาที่รูปเหมือนเดิมทั้ง 3 ช่อง',
+                        questions: makeQs([
+                            ["What is the V2 and V3 of 'put'?", ["putted / putted", "put / put", "pat / pat"], 1, "📥 put - put - put (วาง) เปลี่ยนรูปไม่ได้เลย!"],
+                            ["What is the V2 and V3 of 'cut'?", ["cut / cut", "cutted / cutted", "cat / cat"], 0, "✂️ cut - cut - cut (ตัด)"],
+                            ["What is the V2 and V3 of 'hit'?", ["hitted / hitted", "hat / hat", "hit / hit"], 2, "🏏 hit - hit - hit (ตี)"],
+                            ["What is the V2 and V3 of 'let'?", ["letted / letted", "let / let", "late / late"], 1, "🚪 let - let - let (อนุญาต/ปล่อย)"],
+                            ["What is the V2 and V3 of 'set'?", ["setted / setted", "sat / sat", "set / set"], 2, "⚙️ set - set - set (ตั้งค่า/จัดวาง)"],
+                            ["What is the V2 and V3 of 'shut'?", ["shutted / shutted", "shut / shut", "shot / shot"], 1, "🚪 shut - shut - shut (ปิด)"],
+                            ["What is the V2 and V3 of 'cost'?", ["costed / costed", "cost / cost", "cast / cast"], 1, "💰 cost - cost - cost (มีราคา)"],
+                            ["What is the V2 and V3 of 'hurt'?", ["hurt / hurt", "hurted / hurted", "heart / heart"], 0, "🤕 hurt - hurt - hurt (เจ็บ/ทำให้เจ็บ)"],
+                            ["What is the V2 and V3 of 'read'?", ["readed / readed", "read / read", "rode / ridden"], 1, "📖 read - read - read (อ่าน) *เขียนเหมือนเดิม แต่อ่านว่า รี้ด-เร้ด-เร้ด"],
+                            ["What is the V2 and V3 of 'quit'?", ["quit / quit", "quitted / quitted", "quate / quaten"], 0, "🛑 quit - quit - quit (เลิก/ล้มเลิก)"]
+                        ])
+                    },
+                    {
+                        id: 4, title: 'Level 4: V1 = V3', subtitle: 'ช่องที่ 1 และ 3 หน้าตาเหมือนกัน',
+                        questions: makeQs([
+                            ["What is the V2 and V3 of 'come'?", ["comed / comed", "came / come", "came / came"], 1, "🚶‍♂️ come - came - come (มา) ช่อง 1 และ 3 กลับมาเหมือนกัน"],
+                            ["What is the V2 and V3 of 'become'?", ["became / become", "becomed / becomed", "became / became"], 0, "🐛 become - became - become (กลายเป็น) คล้าย come"],
+                            ["What is the V2 and V3 of 'run'?", ["runned / runned", "ran / run", "ran / ran"], 1, "🏃 run - ran - run (วิ่ง)"],
+                            ["I ___ to the party yesterday. (come)", ["come", "came", "comed"], 1, "⏪ อดีต ใช้ช่อง 2 (came)"],
+                            ["She has ___ a great doctor. (become)", ["became", "become", "becomed"], 1, "🌉 Present Perfect ใช้ช่อง 3 (become)"],
+                            ["He ___ a marathon last year. (run)", ["ran", "run", "runned"], 0, "⏪ อดีต ใช้ช่อง 2 (ran)"],
+                            ["Have they ___ back home? (come)", ["came", "comed", "come"], 2, "🌉 Present Perfect ใช้ช่อง 3 (come)"],
+                            ["The caterpillar has ___ a butterfly. (become)", ["became", "become", "becomed"], 1, "🌉 Present Perfect ใช้ช่อง 3 (become)"],
+                            ["I have ___ 5 kilometers today. (run)", ["ran", "run", "runned"], 1, "🌉 Present Perfect ใช้ช่อง 3 (run)"],
+                            ["She ___ running towards me. (come)", ["came", "come", "comed"], 0, "⏪ อดีต ใช้ช่อง 2 (came)"]
+                        ])
+                    },
+                    {
+                        id: 5, title: 'Level 5: Confusing Verbs', subtitle: 'คำกริยาชวนสับสน (lie, lay, fall...)',
+                        questions: makeQs([
+                            ["What is V1-V2-V3 for 'นอนลง (เอนตัวลง)'?", ["lie - lay - lain", "lay - laid - laid", "lie - lied - lied"], 0, "🛏️ lie - lay - lain (นอนลง) ไม่ต้องมีกรรมมารับ"],
+                            ["What is V1-V2-V3 for 'วางลง/ออกไข่'?", ["lie - lay - lain", "lay - laid - laid", "lie - lied - lied"], 1, "🥚 lay - laid - laid (วางลง) ต้องมีกรรมมารับ เช่น lay an egg"],
+                            ["What is V1-V2-V3 for 'โกหก'?", ["lie - lay - lain", "lay - laid - laid", "lie - lied - lied"], 2, "🤥 lie - lied - lied (โกหก) เป็นกริยาปกติเติม ed"],
+                            ["What is V1-V2-V3 for 'ลุกขึ้น/พระอาทิตย์ขึ้น'?", ["rise - rose - risen", "raise - raised - raised", "arise - arose - arisen"], 0, "🌅 rise - rose - risen (ลอยขึ้นเอง) ไม่มีกรรมรับ"],
+                            ["What is V1-V2-V3 for 'ยกขึ้น/เลี้ยงดู'?", ["rise - rose - risen", "raise - raised - raised", "arise - arose - arisen"], 1, "✋ raise - raised - raised (ยกขึ้น) ต้องมีกรรมมารับ เช่น raise your hand"],
+                            ["What is V1-V2-V3 for 'ตกลงมา'?", ["fall - fell - fallen", "feel - felt - felt", "fill - filled - filled"], 0, "🍂 fall - fell - fallen (ตก/ร่วง)"],
+                            ["What is V1-V2-V3 for 'รู้สึก'?", ["fall - fell - fallen", "feel - felt - felt", "fill - filled - filled"], 1, "❤️ feel - felt - felt (รู้สึก)"],
+                            ["He ___ on the bed yesterday.", ["lied", "lay", "laid"], 1, "🛏️ อดีตของ 'นอนลง' (lie) คือ lay"],
+                            ["The hen has ___ 3 eggs.", ["lain", "laid", "lied"], 1, "🥚 ช่อง 3 ของ 'ออกไข่' (lay) คือ laid"],
+                            ["Please ___ your hand if you have a question.", ["rise", "raise", "arise"], 1, "✋ 'ยกมือ' ต้องมีกรรมมารับ ใช้ raise"]
+                        ])
+                    },
+                    {
+                        id: 6, title: 'Level 6: Advanced Verbs', subtitle: 'คำกริยาที่เปลี่ยนรูปแปลกๆ',
+                        questions: makeQs([
+                            ["What is the V2 and V3 of 'fly'?", ["flied / flied", "flew / flown", "flow / flown"], 1, "✈️ fly - flew - flown (บิน)"],
+                            ["What is the V2 and V3 of 'hide'?", ["hided / hided", "hid / hidden", "hade / hidden"], 1, "🙈 hide - hid - hidden (ซ่อน)"],
+                            ["What is the V2 and V3 of 'tear'?", ["teared / teared", "tore / torn", "tare / toren"], 1, "📄 tear - tore - torn (ฉีกขาด)"],
+                            ["What is the V2 and V3 of 'wear'?", ["weared / weared", "wore / worn", "ware / woren"], 1, "👕 wear - wore - worn (สวมใส่)"],
+                            ["What is the V2 and V3 of 'throw'?", ["throwed / throwed", "threw / thrown", "thraw / thrown"], 1, "⚾ throw - threw - thrown (ขว้าง/ปา)"],
+                            ["What is the V2 and V3 of 'draw'?", ["drawed / drawed", "drew / drawn", "drow / drawn"], 1, "🎨 draw - drew - drawn (วาด)"],
+                            ["What is the V2 and V3 of 'grow'?", ["growed / growed", "grew / grown", "graw / grown"], 1, "🌱 grow - grew - grown (เติบโต)"],
+                            ["What is the V2 and V3 of 'blow'?", ["blowed / blowed", "blew / blown", "blaw / blown"], 1, "🌬️ blow - blew - blown (เป่า)"],
+                            ["What is the V2 and V3 of 'bite'?", ["bited / bited", "bit / bitten", "bate / botten"], 1, "🦷 bite - bit - bitten (กัด)"],
+                            ["What is the V2 and V3 of 'hide'?", ["hided / hided", "hid / hidden", "hade / hodden"], 1, "🙈 hide - hid - hidden (ซ่อน)"]
+                        ])
+                    },
+                    {
+                        id: 7, title: 'Level 7: V1-V2-V3 Boss', subtitle: 'รวมการทดสอบกริยา 3 ช่องในประโยค',
+                        questions: makeQs([
+                            ["I have never ___ such a beautiful sunset.", ["see", "saw", "seen"], 2, "🌅 Present Perfect ต้องใช้ V.3 (seen)"],
+                            ["She ___ a letter to her friend yesterday.", ["writes", "wrote", "written"], 1, "✉️ 'yesterday' = อดีต ต้องใช้ V.2 (wrote)"],
+                            ["They had ___ all the cake before I arrived.", ["eat", "ate", "eaten"], 2, "🍰 Past Perfect (had + V.3) ใช้ eaten"],
+                            ["He ___ his leg while playing football.", ["break", "broke", "broken"], 1, "🦵 เกิดในอดีต ใช้ V.2 (broke)"],
+                            ["My car was ___ last night.", ["steal", "stole", "stolen"], 2, "🚗 Passive Voice (ถูกกระทำ) verb to be + V.3 (stolen)"],
+                            ["I ___ him a gift for his birthday.", ["give", "gave", "given"], 1, "🎁 เกิดในอดีตจบแล้ว ใช้ V.2 (gave)"],
+                            ["The wind ___ very hard last night.", ["blows", "blew", "blown"], 1, "🌬️ อดีต ใช้ V.2 (blew)"],
+                            ["Has the bell ___ yet?", ["ring", "rang", "rung"], 2, "🔔 Present Perfect (Has/Have + V.3) ใช้ rung"],
+                            ["I accidentally ___ my shirt on a nail.", ["tear", "tore", "torn"], 1, "👕 อุบัติเหตุเกิดในอดีต ใช้ V.2 (tore)"],
+                            ["He has ___ in bed all day.", ["lie", "lay", "lain"], 2, "🛏️ นอนราบด้วยตัวเอง (ไม่มีกรรม) ช่อง 3 คือ lain"]
+                        ])
+                    }
+                ]
+            },
+            {
+                id: 'regular',
+                title: 'Regular/Irregular',
+                subtitle: 'กฎการผันกริยาที่คุณต้องรู้',
+                icon: '🔄',
+                color: 'bg-sky-100 text-sky-800 border-sky-300',
+                accentColor: '#0EA5E9',
+                levels: [
+                    {
+                        id: 1, title: 'Level 1: -ed Pronunciation', subtitle: 'การออกเสียง -ed (t, d, id)',
+                        questions: makeQs([
+                            ["How is '-ed' pronounced in 'wanted'?", ["/t/", "/d/", "/id/"], 2, "🗣️ คำที่ลงท้ายด้วยเสียง t หรือ d เมื่อเติม ed จะออกเสียง /id/ (อิด)"],
+                            ["How is '-ed' pronounced in 'needed'?", ["/t/", "/d/", "/id/"], 2, "🗣️ ลงท้ายด้วยเสียง d เติม ed ออกเสียง /id/ (อิด)"],
+                            ["How is '-ed' pronounced in 'washed'?", ["/t/", "/d/", "/id/"], 0, "🗣️ ลงท้ายด้วยเสียงไม่ก้อง (sh) เติม ed ออกเสียง /t/ (ทึ)"],
+                            ["How is '-ed' pronounced in 'watched'?", ["/t/", "/d/", "/id/"], 0, "🗣️ ลงท้ายด้วยเสียงไม่ก้อง (ch) ออกเสียง /t/"],
+                            ["How is '-ed' pronounced in 'laughed'?", ["/t/", "/d/", "/id/"], 0, "🗣️ ลงท้ายด้วยเสียง /f/ (gh) ออกเสียง /t/"],
+                            ["How is '-ed' pronounced in 'played'?", ["/t/", "/d/", "/id/"], 1, "🗣️ ลงท้ายด้วยเสียงก้อง (y) ออกเสียง /d/ (ดึ)"],
+                            ["How is '-ed' pronounced in 'cleaned'?", ["/t/", "/d/", "/id/"], 1, "🗣️ ลงท้ายด้วยเสียงก้อง (n) ออกเสียง /d/"],
+                            ["How is '-ed' pronounced in 'smiled'?", ["/t/", "/d/", "/id/"], 1, "🗣️ ลงท้ายด้วยเสียงก้อง (l) ออกเสียง /d/"],
+                            ["How is '-ed' pronounced in 'waited'?", ["/t/", "/d/", "/id/"], 2, "🗣️ ลงท้ายด้วยเสียง t ออกเสียง /id/"],
+                            ["How is '-ed' pronounced in 'kissed'?", ["/t/", "/d/", "/id/"], 0, "🗣️ ลงท้ายด้วยเสียงไม่ก้อง (s) ออกเสียง /t/"]
+                        ])
+                    },
+                    {
+                        id: 2, title: 'Level 2: Irregular Verbs', subtitle: 'คำกริยาที่ไม่ยอมเติม -ed',
+                        questions: makeQs([
+                            ["Which of these is an IRREGULAR verb?", ["play", "swim", "watch"], 1, "🏊 swim - swam - swum เปลี่ยนรูป ไม่เติม ed"],
+                            ["Which of these is a REGULAR verb?", ["go", "eat", "walk"], 2, "🚶 walk - walked - walked เติม ed ปกติ"],
+                            ["What is the past tense of 'choose'?", ["choosed", "chose", "chosen"], 1, "👉 choose - chose - chosen (เลือก)"],
+                            ["What is the past tense of 'drive'?", ["drived", "drove", "driven"], 1, "🚗 drive - drove - driven (ขับรถ)"],
+                            ["Which verb does NOT change in the past tense?", ["put", "make", "think"], 0, "📥 put - put - put ไม่เปลี่ยนรูปเลย"],
+                            ["What is the past tense of 'find'?", ["finded", "found", "fond"], 1, "🔍 find - found - found (ค้นหา)"],
+                            ["What is the past tense of 'teach'?", ["teached", "taught", "touch"], 1, "👨‍🏫 teach - taught - taught (สอน)"],
+                            ["Which of these is an IRREGULAR verb?", ["study", "drink", "work"], 1, "🥤 drink - drank - drunk เปลี่ยนรูป"],
+                            ["What is the past tense of 'sing'?", ["singed", "sang", "sung"], 1, "🎤 sing - sang - sung (ร้องเพลง)"],
+                            ["What is the past tense of 'break'?", ["breaked", "broke", "broken"], 1, "💔 break - broke - broken (แตก/หัก)"]
+                        ])
+                    },
+                    {
+                        id: 3, title: 'Level 3: Mix Boss Fight', subtitle: 'ทดสอบ Regular และ Irregular',
+                        questions: makeQs([
+                            ["I ___ my keys yesterday. (lose)", ["losed", "lost", "loosed"], 1, "🔑 lose เป็น Irregular verb ➔ lost"],
+                            ["She ___ the door carefully. (close)", ["closed", "clost", "cloesed"], 0, "🚪 close เป็น Regular verb ➔ closed"],
+                            ["He ___ a lot of money on that car. (spend)", ["spended", "spent", "span"], 1, "💸 spend เป็น Irregular verb ➔ spent"],
+                            ["They ___ English for 3 years. (study)", ["studyed", "studied", "stood"], 1, "📚 study ลงท้ายด้วย y หน้า y เป็นพยัญชนะ เปลี่ยน y เป็น i เติม ed"],
+                            ["I ___ the movie a lot! (enjoy)", ["enjoyed", "enjoied", "enjay"], 0, "🎬 enjoy หน้า y เป็นสระ (o) ให้เติม ed ได้เลย"],
+                            ["She ___ the glass on the floor. (drop)", ["droped", "dropped", "dropt"], 1, "🍷 drop เสียงสั้นสระตัวเดียว ต้องเบิ้ลตัวสะกด ➔ dropped"],
+                            ["He ___ to me about his homework. (lie - โกหก)", ["lay", "lied", "lain"], 1, "🤥 lie (โกหก) เป็น Regular verb เติม d ได้เลย"],
+                            ["We ___ to Paris last summer. (fly)", ["flied", "flew", "flow"], 1, "✈️ fly เป็น Irregular verb ➔ flew"],
+                            ["The dog ___ the postman. (bite)", ["bited", "bit", "bitten"], 1, "🐕 bite เป็น Irregular verb ช่อง 2 คือ bit"],
+                            ["She ___ him to the hospital. (take)", ["taked", "took", "taken"], 1, "🏥 take เป็น Irregular verb ช่อง 2 คือ took"]
+                        ])
+                    }
+                ]
+            }
+        ];
+
+        // --- Main App Component ---
+        function App() {
+            const [activeTab, setActiveTab] = useState('Home');
+            const [selectedCategory, setSelectedCategory] = useState(null);
+            const [activeLevel, setActiveLevel] = useState(null);
+            
+            // Progress & State
+            const [unlockedLevels, setUnlockedLevels] = useState({});
+            const [totalXP, setTotalXP] = useState(0);
+            const [streak, setStreak] = useState(5);
+            
+            // Game Play State
+            const [mainQueue, setMainQueue] = useState([]);
+            const [retryQueue, setRetryQueue] = useState([]);
+            const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+            const [isEvaluating, setIsEvaluating] = useState(false);
+            const [feedback, setFeedback] = useState(null);
+            const [selectedOption, setSelectedOption] = useState(null); // Track clicked button
+            const [combo, setCombo] = useState(0);
+            const [xpEarned, setXpEarned] = useState(0);
+            const [levelStatus, setLevelStatus] = useState('playing'); // playing, cleared
+            
+            const mapScrollRef = useRef(null);
+            const activeNodeRef = useRef(null);
+
+            // Scroll to the current active level when map is opened
+            useEffect(() => {
+                if (selectedCategory && !activeLevel) {
+                    setTimeout(() => {
+                        if (activeNodeRef.current) {
+                            activeNodeRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }, 100);
+                }
+            }, [selectedCategory, activeLevel]);
+
+            // Load progress from localStorage on mount
+            useEffect(() => {
+                try {
+                    const savedUnlocked = localStorage.getItem('blobyt_unlocked');
+                    const savedXP = localStorage.getItem('blobyt_xp');
+                    
+                    let parsedUnlocked = savedUnlocked ? JSON.parse(savedUnlocked) : {};
+                    
+                    // Ensure Level 1 of every category is unlocked by default
+                    CATEGORIES_DATA.forEach(cat => {
+                        if (!parsedUnlocked[cat.id]) {
+                            parsedUnlocked[cat.id] = [1];
+                        } else if (!parsedUnlocked[cat.id].includes(1)) {
+                            parsedUnlocked[cat.id].push(1);
+                        }
+                    });
+                    
+                    setUnlockedLevels(parsedUnlocked);
+                    if (savedXP) setTotalXP(parseInt(savedXP, 10));
+                } catch (e) {
+                    console.error("Could not load save data", e);
+                }
+            }, []);
+
+            // Save progress
+            useEffect(() => {
+                try {
+                    if (Object.keys(unlockedLevels).length > 0) {
+                        localStorage.setItem('blobyt_unlocked', JSON.stringify(unlockedLevels));
+                        localStorage.setItem('blobyt_xp', totalXP.toString());
+                    }
+                } catch (e) {
+                    console.error("Could not save data", e);
+                }
+            }, [unlockedLevels, totalXP]);
+
+            const startGame = (levelData) => {
+                setMainQueue([...levelData.questions]);
+                setRetryQueue([]);
+                setCurrentQuestionIdx(0);
+                setCombo(0);
+                setXpEarned(0);
+                setActiveLevel(levelData);
+                setLevelStatus('playing');
+                setIsEvaluating(false);
+                setFeedback(null);
+                setSelectedOption(null); // Reset
+            };
+
+            const handleAnswer = (optionIdx) => {
+                if (isEvaluating) return;
+                
+                setSelectedOption(optionIdx); // Record which button was clicked
+                
+                const isMainQueue = currentQuestionIdx < mainQueue.length;
+                const currentQ = isMainQueue ? mainQueue[currentQuestionIdx] : retryQueue[currentQuestionIdx - mainQueue.length];
+                
+                const isCorrect = optionIdx === currentQ.correct;
+
+                if (isCorrect) {
+                    const newCombo = combo + 1;
+                    setCombo(newCombo);
+                    const earned = 20 + (newCombo >= 2 ? 10 : 0);
+                    setXpEarned(prev => prev + earned);
+                    
+                    setFeedback({
+                        type: 'correct',
+                        text: newCombo >= 2 ? `🔥 Combo! +${earned} XP` : `✨ Great job! +${earned} XP`,
+                        explanation: currentQ.explanation
+                    });
+                } else {
+                    setCombo(0);
+                    setFeedback({
+                        type: 'incorrect',
+                        text: 'Oops! ตอบไม่ถูก ไม่เป็นไรนะ กดทำข้อต่อไปก่อน เดี๋ยวเราวนกลับมาทวนข้อนี้ใหม่! 📝'
+                    });
+                    
+                    setRetryQueue(prev => [...prev, { ...currentQ, id: Date.now() }]);
+                }
+                
+                setIsEvaluating(true);
+            };
+
+            const nextQuestion = () => {
+                setIsEvaluating(false);
+                setFeedback(null);
+                setSelectedOption(null); // Reset for next question
+                
+                const nextIdx = currentQuestionIdx + 1;
+                const totalQuestionsToAsk = mainQueue.length + retryQueue.length;
+                
+                if (nextIdx >= totalQuestionsToAsk) {
+                    setTotalXP(prev => prev + xpEarned);
+                    setLevelStatus('cleared');
+                    
+                    const currentCat = CATEGORIES_DATA.find(c => c.id === selectedCategory.id);
+                    const currentLevelIndex = currentCat.levels.findIndex(l => l.id === activeLevel.id);
+                    
+                    if (currentLevelIndex < currentCat.levels.length - 1) {
+                        const nextLevelId = currentCat.levels[currentLevelIndex + 1].id;
+                        setUnlockedLevels(prev => {
+                            const catUnlocked = prev[currentCat.id] || [];
+                            if (!catUnlocked.includes(nextLevelId)) {
+                                return { ...prev, [currentCat.id]: [...catUnlocked, nextLevelId] };
+                            }
+                            return prev;
+                        });
+                    }
+                } else {
+                    setCurrentQuestionIdx(nextIdx);
+                }
+            };
+
+            const renderHome = () => (
+                <div className="flex-1 overflow-y-auto p-4 pb-28 scroll-smooth">
+                    <div className="flex justify-between items-center mb-6 pt-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border-2 border-emerald-100 overflow-hidden text-2xl">
+                                🐱
+                            </div>
+                            <div>
+                                <div className="font-extrabold text-lg">Hi, Blob 👋</div>
+                                <div className="text-xs text-emerald-700 flex items-center gap-1 font-medium">
+                                    <IconSparkles size={12} /> Grammar Master
+                                </div>
+                            </div>
+                        </div>
+                        <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm border border-orange-100 flex items-center gap-1">
+                            <IconFlame size={16} className="text-orange-500" />
+                            <span className="font-bold text-sm text-orange-700">{streak} Days</span>
+                        </div>
+                    </div>
+
+                    <div className="mb-8">
+                        <h1 className="text-3xl font-black text-[#4A3B32] leading-tight mb-2">
+                            Your grammar<br/>adventure
+                        </h1>
+                        <p className="text-[#6D5D52] text-sm">Step by step to fluency. 🌱</p>
+                    </div>
+
+                    <div className="space-y-4">
+                        {CATEGORIES_DATA.map((cat) => {
+                            const unlockedCount = (unlockedLevels[cat.id] || []).length;
+                            const progressPercent = Math.min(100, Math.round((unlockedCount / cat.levels.length) * 100));
+
+                            return (
+                                <button 
+                                    key={cat.id}
+                                    onClick={() => setSelectedCategory(cat)}
+                                    className="w-full bg-[#FFFDF7] rounded-3xl p-4 shadow-sm border border-emerald-50 flex items-center gap-4 hover:shadow-md hover:scale-[1.02] transition-all text-left"
+                                >
+                                    <div className={`w-20 h-20 rounded-2xl ${cat.color} flex items-center justify-center text-4xl shadow-inner`}>
+                                        {cat.icon}
+                                    </div>
+                                    <div className="flex-1 py-1">
+                                        <h3 className="font-extrabold text-lg text-[#4A3B32]">{cat.title}</h3>
+                                        <p className="text-xs text-[#6D5D52] mb-3 leading-relaxed">{cat.subtitle}</p>
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                                                <div 
+                                                    className="h-full rounded-full transition-all duration-1000 ease-out"
+                                                    style={{ width: `${progressPercent}%`, backgroundColor: cat.accentColor }}
+                                                ></div>
+                                            </div>
+                                            <span className="text-xs font-bold" style={{ color: cat.accentColor }}>
+                                                {progressPercent}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100">
+                                        <IconChevronLeft className="rotate-180" size={18} strokeWidth={3} />
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+
+            const renderLevelMap = () => {
+                const cat = selectedCategory;
+                const unlocked = unlockedLevels[cat.id] || [1];
+                const reversedLevels = [...cat.levels].reverse();
+
+                return (
+                    <div className="flex flex-col h-full bg-gradient-to-b from-sky-200 via-sky-100 to-emerald-100 relative">
+                        <div className="absolute top-0 w-full p-4 flex items-center justify-between z-50 bg-gradient-to-b from-sky-200 to-transparent pb-10 pointer-events-none">
+                            <button 
+                                onClick={() => setSelectedCategory(null)}
+                                className="w-10 h-10 bg-[#FFFDF7] rounded-full flex items-center justify-center shadow-sm text-[#4A3B32] border border-gray-200/50 pointer-events-auto active:scale-95 transition-transform cursor-pointer"
+                            >
+                                <IconChevronLeft size={24} strokeWidth={2.5} />
+                            </button>
+                            <div className="text-center pointer-events-auto">
+                                <h2 className="font-extrabold text-lg text-[#4A3B32] drop-shadow-sm">{cat.title}</h2>
+                                <p className="text-xs font-bold text-sky-800 bg-white/50 px-2 py-0.5 rounded-full inline-block">
+                                    {unlocked.length} / {cat.levels.length} lessons
+                                </p>
+                            </div>
+                            <div className="w-10"></div>
+                        </div>
+
+                        <div ref={mapScrollRef} className="flex-1 overflow-y-auto pt-24 pb-36 px-4 relative flex flex-col scroll-smooth">
+                            <div className="absolute inset-0 pointer-events-none flex justify-center h-full w-full">
+                                <svg width="100%" height="100%" style={{ minHeight: `${cat.levels.length * 120}px` }}>
+                                    <path 
+                                        d={`M 150 50 ${reversedLevels.map((_, i) => `Q ${i % 2 === 0 ? 300 : 50} ${100 + i * 120} 150 ${150 + i * 120}`).join(' ')}`} 
+                                        fill="none" stroke="#D1D5DB" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" className="opacity-50"
+                                    />
+                                    <path 
+                                        d={`M 150 50 ${reversedLevels.map((_, i) => `Q ${i % 2 === 0 ? 300 : 50} ${100 + i * 120} 150 ${150 + i * 120}`).join(' ')}`} 
+                                        fill="none" stroke="#FCD34D" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="1 24"
+                                    />
+                                </svg>
+                            </div>
+
+                            <div className="relative z-10 flex flex-col gap-12 py-8 items-center" style={{ minHeight: 'max-content' }}>
+                                {reversedLevels.map((lvl, index) => {
+                                    const isUnlocked = unlocked.includes(lvl.id);
+                                    const isCurrent = unlocked.includes(lvl.id) && (!unlocked.includes(lvl.id + 1) || lvl.id === cat.levels.length);
+                                    const isLastNode = lvl.id === cat.levels.length;
+                                    const isEven = index % 2 === 0;
+
+                                    return (
+                                        <div key={lvl.id} ref={isCurrent ? activeNodeRef : null} className={`flex w-full ${isEven ? 'justify-end pr-10' : 'justify-start pl-10'} relative`}>
+                                            <button
+                                                onClick={() => isUnlocked && startGame(lvl)}
+                                                disabled={!isUnlocked}
+                                                className="relative flex flex-col items-center"
+                                            >
+                                                {isCurrent && (
+                                                    <div className="absolute -top-10 animate-bounce bg-yellow-300 text-yellow-900 text-xs font-black px-3 py-1 rounded-full border-2 border-yellow-400 shadow-sm z-20 whitespace-nowrap">
+                                                        START
+                                                    </div>
+                                                )}
+                                                
+                                                <div className={`flex items-center justify-center shadow-lg transition-transform
+                                                    ${isLastNode ? 'w-24 h-24 rounded-3xl' : 'w-20 h-20 rounded-[2rem]'}
+                                                    ${!isUnlocked ? 'bg-gray-300 border-b-4 border-gray-400 opacity-90' : 
+                                                        isCurrent ? 'bg-amber-300 border-b-4 border-amber-500 scale-110' : 
+                                                        'bg-[#FFFDF7] border-b-4 border-gray-200'}
+                                                `}>
+                                                    {!isUnlocked ? (
+                                                        <IconLock size={32} className="text-gray-500" />
+                                                    ) : isLastNode ? (
+                                                        <div className="text-4xl">👑</div>
+                                                    ) : (
+                                                        <div className="text-center">
+                                                            <span className={`text-2xl font-black ${isCurrent ? 'text-amber-800' : 'text-[#4A3B32]'}`}>
+                                                                {lvl.id}
+                                                            </span>
+                                                            {isUnlocked && !isCurrent && (
+                                                                <div className="absolute -bottom-2 -right-2 w-7 h-7 bg-emerald-400 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                                                                    <IconCheck size={16} strokeWidth={4} className="text-white" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderGame = () => {
+                if (levelStatus === 'cleared') {
+                    return (
+                        <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-emerald-100 to-sky-50 text-center">
+                            <div className="text-6xl mb-6 animate-bounce">🎉</div>
+                            <div className="bg-[#FFFDF7] rounded-3xl p-8 w-full max-w-sm shadow-xl border border-emerald-50 mb-8 relative">
+                                <h2 className="text-3xl font-black text-emerald-800 mb-2">Level Cleared!</h2>
+                                <p className="text-[#6D5D52] mb-6 font-medium">You are a grammar expert!</p>
+                                
+                                <div className="flex justify-center gap-4 mb-6">
+                                    <div className="bg-emerald-50 rounded-2xl p-4 flex-1 border border-emerald-100">
+                                        <IconTarget className="mx-auto text-emerald-500 mb-2" size={28} />
+                                        <div className="text-xs text-emerald-700 font-bold uppercase tracking-wider mb-1">Accuracy</div>
+                                        <div className="text-xl font-black text-emerald-900">100%</div>
+                                    </div>
+                                    <div className="bg-amber-50 rounded-2xl p-4 flex-1 border border-amber-100">
+                                        <IconSparkles className="mx-auto text-amber-500 mb-2" size={28} />
+                                        <div className="text-xs text-amber-700 font-bold uppercase tracking-wider mb-1">Total XP</div>
+                                        <div className="text-xl font-black text-amber-900">+{xpEarned}</div>
+                                    </div>
+                                </div>
+                                
+                                <button 
+                                    onClick={() => setActiveLevel(null)}
+                                    className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-bold text-lg shadow-[0_4px_0_rgb(5,150,105)] active:shadow-none active:translate-y-1 transition-all"
+                                >
+                                    Continue
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+
+                const correctCount = currentQuestionIdx - retryQueue.length;
+                const progress = Math.min(100, Math.max(0, (correctCount / mainQueue.length) * 100));
+                
+                const isMainQueue = currentQuestionIdx < mainQueue.length;
+                const currentQ = isMainQueue ? mainQueue[currentQuestionIdx] : retryQueue[currentQuestionIdx - mainQueue.length];
+
+                return (
+                    <div className="flex flex-col h-full bg-[#FFFDF7] p-4 pb-12 overflow-y-auto">
+                        <div className="flex items-center gap-4 mb-8 pt-2">
+                            <button onClick={() => setActiveLevel(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                <IconX size={28} strokeWidth={2.5} />
+                            </button>
+                            <div className="flex-1 bg-gray-100 h-3 rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-400 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                            </div>
+                            <div className="flex items-center gap-1.5 bg-amber-100 px-3 py-1.5 rounded-full border border-amber-200 text-amber-800 font-bold text-sm">
+                                <IconSparkles size={16} className="text-amber-500" />
+                                {xpEarned}
+                            </div>
+                        </div>
+
+                        <div className="mb-6 flex-1 flex flex-col">
+                            {!isMainQueue && !isEvaluating && (
+                                <div className="bg-orange-100 text-orange-800 text-xs font-bold px-3 py-1 rounded-full w-max mb-4 self-center animate-pulse">
+                                    📝 Retry Queue
+                                </div>
+                            )}
+                            
+                            <h2 className="text-2xl font-black text-[#4A3B32] mb-8 leading-snug">
+                                {currentQ.q.split('___').map((part, i, arr) => (
+                                    <Fragment key={i}>
+                                        {part}
+                                        {i !== arr.length - 1 && (
+                                            <span className="inline-block w-16 border-b-2 border-gray-300 mx-1 align-baseline"></span>
+                                        )}
+                                    </Fragment>
+                                ))}
+                            </h2>
+
+                            <div className="space-y-3 mt-auto">
+                                {currentQ.options.map((opt, idx) => {
+                                    let btnClass = "w-full p-4 rounded-2xl border-2 text-left font-bold text-lg transition-all ";
+                                    
+                                    if (!isEvaluating) {
+                                        btnClass += "border-gray-200 bg-white hover:border-emerald-200 hover:bg-emerald-50 text-[#4A3B32] shadow-sm";
+                                    } else {
+                                        if (feedback.type === 'correct') {
+                                            if (idx === currentQ.correct) {
+                                                btnClass += "border-emerald-400 bg-emerald-100 text-emerald-800 shadow-md";
+                                            } else {
+                                                btnClass += "border-gray-200 bg-gray-50 text-gray-400 opacity-60";
+                                            }
+                                        } else {
+                                            // 🚨 ถ้าตอบผิด จะทำไฮไลท์สีแดงเฉพาะข้อที่กดผิดเท่านั้น ข้อถูกจะไม่เปลี่ยนสี เพื่อไม่ให้สปอยล์
+                                            if (idx === selectedOption) {
+                                                btnClass += "border-rose-400 bg-rose-50 text-rose-800 shadow-sm";
+                                            } else {
+                                                btnClass += "border-gray-200 bg-white text-[#4A3B32] opacity-60";
+                                            }
+                                        }
+                                    }
+
+                                    return (
+                                        <button key={idx} disabled={isEvaluating} onClick={() => handleAnswer(idx)} className={btnClass}>
+                                            {opt}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {isEvaluating && (
+                            <div className="mt-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                {feedback.type === 'correct' ? (
+                                    <div className="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 mb-4 shadow-sm">
+                                        <h4 className="text-emerald-800 font-extrabold text-sm mb-2 flex items-center gap-2">
+                                            <IconSparkles size={16} className="text-emerald-600" />
+                                            {feedback.text}
+                                        </h4>
+                                        <div className="text-xs text-[#4A3B32] leading-relaxed font-medium bg-white/90 p-3 rounded-xl border border-emerald-100">
+                                            {feedback.explanation}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 mb-4 shadow-sm flex items-center gap-3">
+                                        <div className="text-2xl">📝</div>
+                                        <h4 className="text-amber-900 font-bold text-sm leading-relaxed">
+                                            {feedback.text}
+                                        </h4>
+                                    </div>
+                                )}
+
+                                <button
+                                    onClick={nextQuestion}
+                                    className={`w-full py-4 rounded-2xl font-bold text-lg text-white transition-all
+                                        ${feedback.type === 'correct' ? 'bg-emerald-500 shadow-[0_4px_0_rgb(5,150,105)]' : 'bg-amber-500 shadow-[0_4px_0_rgb(217,119,6)]'} 
+                                        active:shadow-none active:translate-y-1`}
+                                >
+                                    Continue
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            const renderProfile = () => (
+                <div className="flex-1 overflow-y-auto p-4 pb-28 bg-[#FFFDF7]">
+                    <h2 className="text-2xl font-black text-[#4A3B32] mb-6 pt-4 text-center">My Profile</h2>
+                    
+                    <div className="flex flex-col items-center mb-8">
+                        <div className="w-24 h-24 bg-sky-100 rounded-full flex items-center justify-center shadow-inner border-4 border-white mb-3 text-5xl">🐱</div>
+                        <h3 className="font-extrabold text-xl text-[#4A3B32]">Blob</h3>
+                        <p className="text-sm text-emerald-600 font-medium flex items-center gap-1 mt-1">Growing a little every day 🌱</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="bg-orange-50 rounded-3xl p-5 shadow-sm border border-orange-100 flex flex-col">
+                            <IconFlame className="text-orange-500 mb-2" size={28} />
+                            <div className="text-xs text-orange-800 font-bold mb-1">Streak Days</div>
+                            <div className="text-2xl font-black text-[#4A3B32]">{streak} days</div>
+                        </div>
+                        <div className="bg-sky-50 rounded-3xl p-5 shadow-sm border border-sky-100 flex flex-col">
+                            <IconTrophy className="text-sky-500 mb-2" size={28} />
+                            <div className="text-xs text-sky-800 font-bold mb-1">Total XP</div>
+                            <div className="text-2xl font-black text-[#4A3B32]">{totalXP}</div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+                        <h4 className="font-extrabold text-[#4A3B32] mb-4 flex items-center gap-2">
+                            <IconCalendar size={18} className="text-emerald-500" />
+                            Activity Calendar
+                        </h4>
+                        <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold text-gray-400 mb-2">
+                            <div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div><div>S</div>
+                        </div>
+                        <div className="grid grid-cols-7 gap-2">
+                            {Array.from({ length: 14 }).map((_, i) => (
+                                <div key={i} className={`aspect-square rounded-xl flex items-center justify-center text-xs font-medium
+                                    ${i < streak ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-gray-50 text-gray-300'}`}>
+                                    {i < streak ? '🐾' : (10 + i)}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="font-sans text-[#4A3B32] h-full w-full relative flex flex-col">
+                    {activeLevel ? renderGame() : selectedCategory ? renderLevelMap() : activeTab === 'Home' ? renderHome() : renderProfile()}
+
+                    {!activeLevel && !selectedCategory && (
+                        <div className="absolute bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-200 pb-8 pt-4 px-12 sm:pb-6 flex justify-between items-center z-50">
+                            <button 
+                                onClick={() => setActiveTab('Home')}
+                                className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'Home' ? 'text-emerald-500' : 'text-gray-400'}`}
+                            >
+                                <div className={`p-2 rounded-xl ${activeTab === 'Home' ? 'bg-emerald-50' : ''}`}>
+                                    <IconBookOpen size={24} strokeWidth={activeTab === 'Home' ? 2.5 : 2} />
+                                </div>
+                                <span className="text-[10px] font-bold">Lessons</span>
+                            </button>
+                            
+                            <button 
+                                onClick={() => setActiveTab('Profile')}
+                                className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'Profile' ? 'text-emerald-500' : 'text-gray-400'}`}
+                            >
+                                <div className={`p-2 rounded-xl ${activeTab === 'Profile' ? 'bg-emerald-50' : ''}`}>
+                                    <div className="w-6 h-6 bg-gray-200 rounded-full overflow-hidden flex items-center justify-center text-xs">🐱</div>
+                                </div>
+                                <span className="text-[10px] font-bold">Profile</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
